@@ -11,6 +11,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/antithesishq/antithesis-sdk-go/assert"
 	"github.com/failsafe-go/failsafe-go/adaptivelimiter"
 	"github.com/go-kit/log/level"
 	"github.com/grafana/dskit/middleware"
@@ -441,6 +442,12 @@ func (i *Ingester) PushWithCleanup(ctx context.Context, req *mimirpb.WriteReques
 	if stats.succeededSamplesCount > 0 {
 		db.setLastUpdate(time.Now())
 	}
+
+	assert.AlwaysOrUnreachable(stats.succeededSamplesCount >= droppedNewValue+droppedSameValue, "commit-time drops do not exceed samples accepted at Append", map[string]any{
+		"succeeded":          stats.succeededSamplesCount,
+		"dropped_new_value":  droppedNewValue,
+		"dropped_same_value": droppedSameValue,
+	})
 
 	// Increment metrics only if the samples have been successfully committed.
 	// If the code didn't reach this point, it means that we returned an error
